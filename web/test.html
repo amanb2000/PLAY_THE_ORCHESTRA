@@ -3,7 +3,6 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
   var conn = io();
-  conn.on('send-id', function(msg) { conn.id = msg; console.log(conn.id); });
   document.addEventListener('keydown', function(event) {
         console.log(event.key);
         conn.emit('chat message', event.key);
