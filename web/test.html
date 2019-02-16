@@ -1,0 +1,11 @@
+<html>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  var conn = io();
+
+  document.addEventListener('keydown', function(event) {
+        console.log(event.key);
+        conn.emit('chat message', event.key);
+    }, false);
+</script>
+</html>
