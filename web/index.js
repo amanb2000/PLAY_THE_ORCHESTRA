@@ -19,8 +19,8 @@ io.on('connection', function(socket) {
     connCount--;
     console.log("Disconnected");
   });
-  socket.on('chat message', function(msg){
-    io.emit('chat message', msg);
+  socket.on('chord-msg', function(msg){
+    io.emit('chord-req', msg);
   });
 });
 

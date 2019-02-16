@@ -1,15 +1,11 @@
 <html>
 <title>Slave</title>
 <script src="/socket.io/socket.io.js"></script>
-<script
-  src="https://code.jquery.com/jquery-3.3.1.min.js"
-  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-  crossorigin="anonymous"></script>
-<body> <p id='pee'> This is another page </p> </body>
+<body> <p id='chord'> Notes?</p> </body>
 <script>
   var conn = io();
-  conn.on('chat message', function(msg) {
-    $('#pee').html(msg);
+  conn.on('chord-req', function(msg) {
+    document.querySelector('#chord').innerHTML = msg;
   });
 </script>
 </html>

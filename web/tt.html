@@ -1,0 +1,46 @@
+<html>
+<style>
+.hideimg {
+  display: none;
+}
+
+</style>
+<body>
+  <canvas id="main" width=800 height=400></canvas>
+<img class="hideimg" id="staff" onload="drawStaff()" src="sprites/staff.png">
+<img class="hideimg" id="qNote" src="sprites/quarter.png">
+<script>
+  var canv = document.getElementById("main");
+  var ctx = canv.getContext("2d");
+  var staff = document.getElementById("staff");
+  var qNote = document.getElementById("qNote");
+
+  window.onload = function() {
+    drawNote("C4");
+  }
+
+  function drawStaff() {
+    ctx.drawImage(staff,10,10, 400, 120);
+  }
+
+
+
+  function drawNote(nt, time=1/4) {
+    var note = null;
+    var pos = [0, 0];
+    if (time == 1/4) {
+      note = qNote;
+    }
+    pos = getPos(nt);
+    ctx.drawImage(note, pos[0], pos[1], 45, 95);
+  }
+
+  function getPos(val) {
+    var sp = val.split();
+    var octave = sp.pop();
+    var nt = ''+sp;
+    return [100, 33];
+  }
+</script>
+</body>
+</html>
