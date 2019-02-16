@@ -10,6 +10,8 @@
     <div id="dispDiv"></div>
     <h3>Current four notes</h3>
     <div id="disp2Div"></div>
+    <h3>Current four notes as Names</h3>
+    <div id="disp3Div"></div>
   </body>
 <script>
   var context = new AudioContext();
@@ -42,7 +44,11 @@
           document.querySelector('#dispDiv').innerHTML = ''+curNoteArray;
           curFourNotes = getFourNotes(curNoteArray);
       }
+      noteNameArray = getNoteNameArray(curFourNotes);
+
       document.querySelector('#disp2Div').innerHTML = ''+curFourNotes;
+      document.querySelector('#disp3Div').innerHTML = ''+noteNameArray;
+
 
       // console.log("HHHHHHH")
   }
@@ -79,6 +85,24 @@
     retVal.push(arrIn[1]);
     retVal.push(arrIn[arrIn.length-2]);
     retVal.push(arrIn[arrIn.length-1]);
+    return retVal;
+  }
+
+  function getNoteName(initialNote){
+    var noteString = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+    var octave = parseInt(initialNote / 12) - 1;
+    var noteIndex = (initialNote % 12);
+    var note = noteString[noteIndex];
+
+    return note + octave;
+  }
+
+  function getNoteNameArray(fourArrayIn){
+    retVal = [];
+    for(i = 0; i < fourArrayIn.length; i++){
+      retVal.push(getNoteName(fourArrayIn[i]));
+    }
     return retVal;
   }
 
