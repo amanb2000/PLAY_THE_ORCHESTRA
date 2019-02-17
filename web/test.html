@@ -7,8 +7,8 @@
     display: none;
   }
   .tbl-size {
-    padding-left: 100px;
-    width: 400px;
+    margin-left: 180px;
+    width: 300px;
   }
   </style>
   <body>
@@ -18,9 +18,32 @@
   <img class="hideimg" id="quarter" src="">
   <img class="hideimg" id="quarterP" src="">
   <img class="hideimg" id="sharp" src="">
+  <img class="hideimg" id="treble" src="">
   <img class="hideimg" id="ledger_line" src="">
   <h1>Chord:</h1>
   <p id="chord-name">Chord Name</p>
+  <table>
+    <tr>
+      <td><button onclick="changeKey(9)">A</button></td>
+      <td><button onclick="changeKey(10)">A#</button></td>
+      <td><button onclick="changeKey(11)">B</button></td>
+    </tr>
+    <tr>
+      <td><button onclick="changeKey(0)">C</button></td>
+      <td><button onclick="changeKey(1)">C#</button></td>
+      <td><button onclick="changeKey(2)">D</button></td>
+    </tr>
+    <tr>
+      <td><button onclick="changeKey(3)">D#</button></td>
+      <td><button onclick="changeKey(4)">E</button></td>
+      <td><button onclick="changeKey(5)">F</button></td>
+    </tr>
+    <tr>
+      <td><button onclick="changeKey(6)">F#</button></td>
+      <td><button onclick="changeKey(7)">G</button></td>
+      <td><button onclick="changeKey(8)">G#</button></td>
+    </tr>
+  </table>
   <script>
   var canv = document.getElementById("main");
   var ctx = canv.getContext("2d");
@@ -29,8 +52,9 @@
   var qNoteP = document.getElementById("quarterP");
   var sharp = document.getElementById("sharp");
   var ledger = document.getElementById("ledger_line");
+  var treble = document.getElementById("treble");
   var chordName = document.getElementById("chord-name");
-  var elems = [staff, sharp, qNote, qNoteP, ledger]; // Same order as served (laziness)
+  var elems = [staff, sharp, qNote, qNoteP, treble, ledger]; // Same order as served (laziness)
   var targ = null;
   var conn = null;
   var active = true;
@@ -50,6 +74,11 @@
         navigator.requestMIDIAccess()
             .then(success, failure);
     }
+  }
+
+  function changeKey(key) {
+    conn.emit("chng-key", key);
+    return false;
   }
 
   function onMIDIMessage (message) {
@@ -145,29 +174,40 @@
   }
 
   function drawStaff() {
-    ctx.drawImage(staff, 10, 10, 400, 200);
+    ctx.drawImage(staff, 10, 10, 550, 200);
+    ctx.drawImage(treble, 43, 22, 105, 200);
   }
 
-  function drawNote(nt, off, time=1/4) {
+  function drawNote(nt, offset, time=1/4) {
     var note = null;
     var pos = getPos(nt);
     if (time == 1/4) {
       if (pos[1] < -5) {
         note = qNoteP;
+        shift = Math.ceil(125/2) + 2;
       } else {
         note = qNote;
+        shift = 0;
       }
     }
-    ctx.drawImage(note, pos[0]*off, pos[1], 45, 110);
+    ctx.drawImage(note, pos[0]*offset, pos[1] + shift, 45, 110);
     if (pos[2]) { // Draw sharp optionally
-      ctx.drawImage(sharp, pos[0]*off - 10, pos[1] + 65, 15, 40); // Fix offset
+      ctx.drawImage(sharp, pos[0]*offset - 10, pos[1] + 65, 15, 40);
     }
-    if (pos[1] > 90 || pos[1] < -40) { // Draw ledger line
+    if (pos[1] > 90 || (pos[1] < 20 && shift > 0)) { // Draw ledger line
       yOffset = 73;
       if (pos[1] % 25 == 0) {
         yOffset += 12;
       }
-      ctx.drawImage(ledger, pos[0]*off + 4, pos[1] + yOffset, 35, 2); // Fix offset
+      while (pos[1] + yOffset + shift > 175) {
+        ctx.drawImage(ledger, pos[0]*offset + 4, pos[1] + yOffset + shift, 35, 2);
+        pos[1] -= 25;
+      }
+      yOffset -= 66;
+      while (pos[1] + yOffset + shift < 40 && shift > 0) {
+        ctx.drawImage(ledger, pos[0]*offset + 4, pos[1] + yOffset + shift, 35, 2);
+        pos[1] += 25;
+      }
     }
     return;
   }
@@ -194,7 +234,7 @@
     ctx.clearRect(0, 0, canv.width, canv.height);
     drawStaff();
     notes.forEach(function (val, ind) {
-      drawNote(val, (ind+1)/1.3);
+      drawNote(val, (ind+2)/1.3);
     })
   }
 
@@ -329,19 +369,17 @@
       return 0;
     }
 
-    var major7 = false;
+    var major7 = -1;
 
     if(arrIn[1]-arrIn[0] === 1){
       major7 = true;
     }
     if(arrIn[1]-arrIn[0] === 2){
       major7 = false;//dominant or minor 7
-      console.log("MINOR 7")
     }
 
     if(major7 === -1){
-      console.log("RETURNING Badly MINOR 7")
-      // return 0;
+      return 0;
     }
 
     bass_name = getNoteName(arrIn[1]);
@@ -362,7 +400,6 @@
       }
       else if(major7 === false){
         retVal += " Minor 7"
-        console.log('There should be some minor 7 going on');
       }
     }
 

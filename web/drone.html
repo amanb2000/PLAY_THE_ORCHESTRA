@@ -10,11 +10,14 @@
 </style>
 <body>
 <h1 id="section-name">Section</h1>
+<h1>Key: </h1>
+<p id="key-name">C</p>
 <canvas id="main" width=800 height=260></canvas>
 <img class="hideimg" id="staff" onload="drawStaff()" src="">
 <img class="hideimg" id="quarter" src="">
 <img class="hideimg" id="quarterP" src="">
 <img class="hideimg" id="sharp" src="">
+<img class="hideimg" id="treble" src="">
 <img class="hideimg" id="ledger_line" src="">
 <h1>Chord:</h1>
 <p id="chord-name">Chord Name</p>
@@ -27,15 +30,20 @@
   var qNoteP = document.getElementById("quarterP");
   var sharp = document.getElementById("sharp");
   var ledger = document.getElementById("ledger_line");
+  var treble = document.getElementById("treble");
   var chordName = document.getElementById("chord-name");
+  var keyName = document.getElementById("key-name");
   var sectionTitle = document.getElementById("section-name");
-  var elems = [staff, sharp, qNote, qNoteP, ledger]; // Same order as served (laziness)
+  var elems = [staff, sharp, qNote, qNoteP, treble, ledger]; // Same order as served (laziness)
   var targ = null;
 
   window.onload = function() {
     var conn = io();
     conn.on("section-name", function(msg) {
       sectionTitle.innerHTML = msg;
+    });
+    conn.on("key-chng", function(msg) {
+      keyName.innerHTML = msg;
     });
     conn.on("serve-image-chunk", function(inf) {
       trg = elems.shift();
@@ -45,24 +53,23 @@
       }
     });
     conn.on("chord-req", function(msg) {
-      if (msg != null) {
+      if (msg == 0) {
+        ctx.clearRect(0, 0, canv.width, canv.height);
+        drawStaff();
+      } else if (msg != null) {
         ctx.clearRect(0, 0, canv.width, canv.height);
         drawStaff();
         drawNote(msg);
       }
-      if (msg == 0) {
-        ctx.clearRect(0, 0, canv.width, canv.height);
-        drawStaff();
-      }
     });
     conn.on("chord-chng", function(msg) {
-      console.log(msg);
       chordName.innerHTML = msg;
     });
   }
 
   function drawStaff() {
     ctx.drawImage(staff, 10, 10, 400, 200);
+    ctx.drawImage(treble, 38, 22, 105, 200);
   }
 
   function drawNote(nt, time=1/4) {
@@ -71,20 +78,30 @@
     if (time == 1/4) {
       if (pos[1] < -5) {
         note = qNoteP;
+        shift = Math.ceil(125/2) + 2;
       } else {
         note = qNote;
+        shift = 0;
       }
     }
-    ctx.drawImage(note, pos[0], pos[1], 45, 110);
+    ctx.drawImage(note, pos[0], pos[1] + shift, 45, 110);
     if (pos[2]) { // Draw sharp optionally
-      ctx.drawImage(sharp, pos[0] - 10, pos[1] + 65, 15, 40); // Fix offset
+      ctx.drawImage(sharp, pos[0] - 10, pos[1] + 65, 15, 40);
     }
-    if (pos[1] > 90 || pos[1] < -40) { // Draw ledger line
+    if (pos[1] > 90 || (pos[1] < 20 && shift > 0)) { // Draw ledger line
       yOffset = 73;
       if (pos[1] % 25 == 0) {
         yOffset += 12;
       }
-      ctx.drawImage(ledger, pos[0] + 4, pos[1] + yOffset, 35, 2); // Fix offset
+      while (pos[1] + yOffset + shift > 175) {
+        ctx.drawImage(ledger, pos[0] + 4, pos[1] + yOffset + shift, 35, 2);
+        pos[1] -= 25;
+      }
+      yOffset -= 66;
+      while (pos[1] + yOffset + shift < 40 && shift > 0) {
+        ctx.drawImage(ledger, pos[0] + 4, pos[1] + yOffset + shift, 35, 2);
+        pos[1] += 25;
+      }
     }
     return;
   }
@@ -99,31 +116,12 @@
     console.log("noteNum:" + noteNum);
     var octave_dist = 25*3.5;
     var y = 100;
-    return [100, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];
+    return [160, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];
   }
 
   function getNoteNum(val) {
     var notes = ["C", "D", "E", "F", "G", "A", "B"];
     return notes.indexOf(val);
-  }
-
-  function diffFromC(val) {
-    val = val.toLowerCase();
-    if (val == "a") {
-      return 2;
-    } else if (val == "b") {
-      return 1;
-    } else if (val == "c") {
-      return 0;
-    } else if (val == "d") {
-      return -1;
-    } else if (val == "e") {
-      return -2;
-    } else if (val == "f") {
-      return -3;
-    } else {
-      return -4;
-    }
   }
 </script>
 </body>

@@ -6,32 +6,27 @@ var path = require('path');
 
 var connCount = -1;
 var numOfSections = 4;
-var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'ledger_line.png'];
+var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'treble.png', 'ledger_line.png'];
 
 var keyNum = {
   C: 0,
   CS: 1,
   D: 2,
-  E: 3,
-  F: 4,
-  FS: 5,
-  G: 6,
-  GS: 7,
-  A: 8,
-  AS: 9,
-  B: 10,
-  BS: 11
+  DS: 3,
+  E: 4,
+  F: 5,
+  FS: 6,
+  G: 7,
+  GS: 8,
+  A: 9,
+  AS: 10,
+  B: 11,
 };
 
-var key = keyNum.C;
-
-// // Generate namespaces for socket sections
-// for (i=1; i<=numOfSections; i++) {
-//   io.of('/Section-{0}'.format(i));
-// }
+var key = 0;
 
 app.get('/', function(req, res){
-  if (connCount < 1) {
+  if (connCount < 0) {
     res.sendFile(__dirname + '/test.html');
   } else {
     res.sendFile(__dirname + '/drone.html');
@@ -44,6 +39,7 @@ io.on('connection', function(socket) {
     var sname = 'Section ' + (connCount % numOfSections + 1);
     socket.join(sname);
     socket.emit("section-name", sname);
+    socket.emit("key-chng", getKeyName(key));
   }
   connCount++;
   sprites.forEach(function(elem) {
@@ -57,14 +53,18 @@ io.on('connection', function(socket) {
     console.log("Disconnected");
   });
   socket.on('chord-release', function(msg) {
-    console.log("RELEASE");
     for (i=0;i<numOfSections; i++) {
       io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', 0);
       io.emit('chord-chng', "");
     }
   });
-  socket.on('chord-msg', function(msg){
+  socket.on('chng-key', function(msg) {
     console.log(msg);
+    key = parseInt(msg);
+    keyName = getKeyName(key);
+    io.emit('key-chng', keyName);
+  })
+  socket.on('chord-msg', function(msg){
     if (msg == null) {
       io.emit('chord-chng', "");
       return;
@@ -84,7 +84,7 @@ io.on('connection', function(socket) {
 });
 
 http.listen(3000, function() {
-  console.log('listening on *:3000');
+  console.log('listening on 192.168.122.101:3000');
 })
 
 function getNoteNameArray(fourArrayIn){
@@ -93,6 +93,11 @@ function getNoteNameArray(fourArrayIn){
     retVal.push(getNoteName(fourArrayIn[i]));
   }
   return retVal;
+}
+
+function getKeyName(keyNum) {
+  var noteString = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  return noteString[keyNum];
 }
 
 function getNoteName(initialNote){
@@ -236,19 +241,17 @@ function get7Chord(numFourArrayIn){
     return 0;
   }
 
-  var major7 = false;
+  var major7 = -1;
 
   if(arrIn[1]-arrIn[0] === 1){
     major7 = true;
   }
   if(arrIn[1]-arrIn[0] === 2){
     major7 = false;//dominant or minor 7
-    console.log("MINOR 7")
   }
 
   if(major7 === -1){
-    console.log("RETURNING Badly MINOR 7")
-    // return 0;
+    return 0;
   }
 
   bass_name = getNoteName(arrIn[1]);
@@ -269,7 +272,6 @@ function get7Chord(numFourArrayIn){
     }
     else if(major7 === false){
       retVal += " Minor 7"
-      console.log('There should be some minor 7 going on');
     }
   }
 
