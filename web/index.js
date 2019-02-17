@@ -98,7 +98,11 @@ io.on('connection', function(socket) {
     var nullNote = false
     notes.forEach(function (val) { if (val == null || val == NaN) { console.log("asd"); nullNote = true; }});
     if (nullNote) { return; }
-    var chordName = getChordName(notes)
+    var chordName = getChordName(noteArr);
+    console.log(chordName);
+    if (chordName != 0 && chordName != 1) {
+      io.emit('chord-chng', chordName);
+    }
     subNotes = getNoteNameArray(submission);
     // Get the chord data & Save
     // Key variable name: "key"
@@ -108,7 +112,7 @@ io.on('connection', function(socket) {
 
     noteNums = [];
     for(i = 0; i < notes.length; i++){
-      if (notes[i]) {} else { return; }
+      if (notes[i]) {} else { break; }
       notes[i] = notes[i].substring(0, notes[i].length - 1);
       noteNums.push(getNumberOfNote(notes[i]));
       noteNums[i]-=key;
@@ -118,6 +122,10 @@ io.on('connection', function(socket) {
       else if(noteNums[i] >7){
         noteNums[i] = 7;
       }
+    }
+    for (i=0;i<numOfSections; i++) {
+      final = (i >= subNotes.length) ? 0 : subNotes[i];
+      io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
     }
     if (noteNums.length != 0 && noteArr.length > 2) {
       while(noteNums.length < 4){
@@ -142,7 +150,6 @@ io.on('connection', function(socket) {
          response.on('end', function() {
            data_result = JSON.parse(res);
            if (data_result.Results == null) { return; }
-           console.log(data_result);
            final_pred = data_result.Results.output1.value.Values[0][4];
            chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
            chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
@@ -159,13 +166,6 @@ io.on('connection', function(socket) {
 
       azReq.write(JSON.stringify(data_out));
       azReq.end();
-    }
-    for (i=0;i<numOfSections; i++) {
-      final = (i >= subNotes.length) ? 0 : subNotes[i];
-      io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
-    }
-    if (chordName != 0 && chordName != 1) {
-      io.emit('chord-chng', chordName);
     }
   });
 });
