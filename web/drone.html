@@ -9,12 +9,14 @@
 
 </style>
 <body>
-  <canvas id="main" width=800 height=400></canvas>
+  <canvas id="main" width=800 height=260></canvas>
 <img class="hideimg" id="staff" onload="drawStaff()" src="">
 <img class="hideimg" id="quarter" src="">
 <img class="hideimg" id="quarterP" src="">
 <img class="hideimg" id="sharp" src="">
 <img class="hideimg" id="ledger_line" src="">
+<h1>Chord:</h1>
+<p id="chord-name">Chord Name</p>
 <script>
   var conn = null;
   var canv = document.getElementById("main");
@@ -24,6 +26,7 @@
   var qNoteP = document.getElementById("quarterP");
   var sharp = document.getElementById("sharp");
   var ledger = document.getElementById("ledger_line");
+  var chordName = document.getElementById("chord-name");
   var elems = [staff, sharp, qNote, qNoteP, ledger]; // Same order as served (laziness)
   var targ = null;
 
@@ -44,6 +47,10 @@
         drawNote(msg);
       }
     });
+    conn.on("chord-chng", function(msg) {
+      console.log(msg);
+      chordName.innerHTML = msg;
+    });
   }
 
   function drawStaff() {
@@ -62,7 +69,7 @@
     }
     ctx.drawImage(note, pos[0], pos[1], 45, 110);
     if (pos[2]) { // Draw sharp optionally
-      //ctx.drawImage(sharp, pos[0] - 20, pos[1] - 20); // Fix offset
+      ctx.drawImage(sharp, pos[0] - 10, pos[1] + 65, 15, 40); // Fix offset
     }
     if (pos[1] > 90 || pos[1] < -40) { // Draw ledger line
       yOffset = 73;
@@ -77,19 +84,19 @@
   function getPos(val) { // C4 is middle C @ coords 100, 100
     // 25 between spaces. 12 up to line
     var sp = val.split('');
-    var oct = parseInt(sp.pop());
+    var oct = parseInt(sp.pop()) - 4;
     var nt = sp.join();
-    var ntCd = sp[0];
-    if (nt.length > 1) {
-      sharp = true;
-    } else {
-      sharp = false;
-    }
-    var change = (ntCd == "A" || ntCd == "B") ? 3 : 4;
-    var octDiff = (oct - change)*(225/2);
-    var y = 100 + Math.ceil(25/2)*diffFromC(ntCd);
-    console.log(y - octDiff);
-    return [100, y - octDiff, true];
+    console.log(sp[0]);
+    var noteNum = getNoteNum(sp[0]);
+    console.log("noteNum:" + noteNum);
+    var octave_dist = 25*3.5;
+    var y = 100;
+    return [100, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];
+  }
+
+  function getNoteNum(val) {
+    var notes = ["C", "D", "E", "F", "G", "A", "B"];
+    return notes.indexOf(val);
   }
 
   function diffFromC(val) {

@@ -22,6 +22,7 @@
   }
 
   function onMIDIMessage (message) {
+    if (message.data[0] == 248) { return; }
       console.log(message.data);//[0] = on/off (144=on, 128=off), [1] = note number(c3=60), [2] = velocity(0-127)
       //note: for now, it only works when "Bank A/B" is red and the rest of the buttons are off
 
@@ -46,7 +47,7 @@
       document.querySelector('#disp2Div').innerHTML = ''+curFourNotes;
       document.querySelector('#disp3Div').innerHTML = ''+noteNameArray;
 
-      conn.emit("chord-msg", noteNameArray[0]);
+      conn.emit("chord-msg", ''+curFourNotes);
   }
 
   function success (midi) {
