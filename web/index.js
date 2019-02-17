@@ -88,6 +88,30 @@ io.on('connection', function(socket) {
     // Get the chord data & Save
     // Key variable name: "key"
     // Notes array input: "noteArr" (midi #s)
+    // THESE ARE AMAN'S FUNCTIONS FOR GETTING the DEGREES of the LAST FOUR CHORDS based on
+    // Strategy: To simplify this, I'll use the last 4 notes as the thing to send in.
+    noteNums = []
+
+    for(i = 0; i < notes.length; i++){
+      noteNums.append(getNumberOfNote(notes[i]));
+      noteNums[i]-=key;
+      if(noteNums[i] < 0){
+        noteNums[i] = 0;
+      }
+      else if(noteNums[i] >7){
+        noteNums[i] = 7;
+      }
+    }
+
+    while(noteNums.length < 4){
+      noteNums.append(noteNums[0]);
+    }
+
+    //TO ADAM: noteNums is the int array of length 4 that you send to Azure
+
+
+
+
     chordName = getChordName(noteArr);
     for (i=0;i<numOfSections; i++) {
       final = (i >= notes.length) ? 0 : notes[i];
@@ -138,6 +162,11 @@ function getNoteNameArray(fourArrayIn){
     retVal.push(getNoteName(fourArrayIn[i]));
   }
   return retVal;
+}
+
+function getNumberOfNote(strIn){//returns number based on note name.
+  var noteString = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  return noteString.indexOf(strIn);
 }
 
 function getKeyName(keyNum) {
