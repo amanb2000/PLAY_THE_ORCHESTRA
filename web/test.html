@@ -46,7 +46,7 @@
       document.querySelector('#disp2Div').innerHTML = ''+curFourNotes;
       document.querySelector('#disp3Div').innerHTML = ''+noteNameArray;
 
-      conn.emit("chord-msg", ''+noteNameArray);
+      conn.emit("chord-msg", noteNameArray[0]);
   }
 
   function success (midi) {

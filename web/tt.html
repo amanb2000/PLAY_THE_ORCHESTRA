@@ -9,37 +9,83 @@
   <canvas id="main" width=800 height=400></canvas>
 <img class="hideimg" id="staff" onload="drawStaff()" src="sprites/staff.png">
 <img class="hideimg" id="qNote" src="sprites/quarter.png">
+<img class="hideimg" id="qNoteP" src="sprites/quarterP.png">
+<img class="hideimg" id="sharp" src="sprites/sharp.png">
+<img class="hideimg" id="ledger" src="sprites/ledger_line.png">
 <script>
   var canv = document.getElementById("main");
   var ctx = canv.getContext("2d");
   var staff = document.getElementById("staff");
   var qNote = document.getElementById("qNote");
+  var qNoteP = document.getElementById("qNoteP");
+  var sharp = document.getElementById("sharp");
+  var ledger = document.getElementById("ledger");
 
   window.onload = function() {
-    drawNote("C4");
+    drawNote("A3");
   }
 
   function drawStaff() {
-    ctx.drawImage(staff,10,10, 400, 120);
+    ctx.drawImage(staff,10,10, 400, 200);
   }
-
-
 
   function drawNote(nt, time=1/4) {
     var note = null;
-    var pos = [0, 0];
+    var pos = getPos(nt);
     if (time == 1/4) {
-      note = qNote;
+      if (pos[1] < -5) {
+        note = qNoteP;
+      } else {
+        note = qNote;
+      }
     }
-    pos = getPos(nt);
-    ctx.drawImage(note, pos[0], pos[1], 45, 95);
+    ctx.drawImage(note, pos[0], pos[1], 45, 110);
+    if (pos[2]) { // Draw sharp optionally
+      //ctx.drawImage(sharp, pos[0] - 20, pos[1] - 20); // Fix offset
+    }
+    if (pos[1] > 90 || pos[1] < -40) { // Draw ledger line
+      console.log("heyt");
+      yOffset = 73;
+      if (pos[1] % 25 == 0) {
+        yOffset += 12;
+      }
+      ctx.drawImage(ledger, pos[0] + 12, pos[1] + yOffset); // Fix offset
+    }
+    return;
   }
 
-  function getPos(val) {
-    var sp = val.split();
-    var octave = sp.pop();
-    var nt = ''+sp;
-    return [100, 33];
+  function getPos(val) { // C4 is middle C @ coords 100, 100
+    // 25 between spaces. 12 up to line
+    var sp = val.split('');
+    var octDiff = (parseInt(sp.pop()) - 4) * (225/2);
+    var nt = sp.join();
+    var ntCd = sp[0];
+    if (nt.length > 1) {
+      sharp = true;
+    } else {
+      sharp = false;
+    }
+    var y = 100 + Math.ceil(25/2)*diffFromC(ntCd);
+    return [100, y + octDiff, true];
+  }
+
+  function diffFromC(val) {
+    val = val.toLowerCase();
+    if (val == "a") {
+      return -2;
+    } else if (val == "b") {
+      return -1;
+    } else if (val == "c") {
+      return 0;
+    } else if (val == "d") {
+      return 1;
+    } else if (val == "e") {
+      return 2;
+    } else if (val == "f") {
+      return 3;
+    } else {
+      return 4;
+    }
   }
 </script>
 </body>
