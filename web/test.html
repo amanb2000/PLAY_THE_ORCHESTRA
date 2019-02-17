@@ -33,11 +33,12 @@
   var elems = [staff, sharp, qNote, qNoteP, ledger]; // Same order as served (laziness)
   var targ = null;
   var conn = null;
+  var active = true;
   var curNoteArray = [];
   var curFourNotes = [];
 
   window.onload = function() {
-    var conn = io();
+    conn = io();
     conn.on("serve-image-chunk", function(inf) {
       trg = elems.shift();
       if (inf.image) {
@@ -52,7 +53,6 @@
   }
 
   function onMIDIMessage (message) {
-      if (message.data[0] == 248) { return; }
       // console.log(message.data);//[0] = on/off (144=on, 128=off), [1] = note number(c3=60), [2] = velocity(0-127)
       //note: for now, it only works when "Bank A/B" is red and the rest of the buttons are off
 
@@ -77,8 +77,14 @@
       // document.querySelector('#disp2Div').innerHTML = ''+curFourNotes;
       // document.querySelector('#disp3Div').innerHTML = ''+noteNameArray;
 
+
       plotNotes(noteNameArray);
       name = getChordName(curFourNotes);
+      if (message.data[0] === 128 && noteNameArray.length == 0) {
+        conn.emit("chord-release", 0);
+        chordName.innerHTML = "";
+        return;
+      }
       if (name != 0 && name != 1) {
         chordName.innerHTML = name;
       }

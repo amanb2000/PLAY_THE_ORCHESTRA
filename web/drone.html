@@ -9,7 +9,8 @@
 
 </style>
 <body>
-  <canvas id="main" width=800 height=260></canvas>
+<h1 id="section-name">Section</h1>
+<canvas id="main" width=800 height=260></canvas>
 <img class="hideimg" id="staff" onload="drawStaff()" src="">
 <img class="hideimg" id="quarter" src="">
 <img class="hideimg" id="quarterP" src="">
@@ -27,11 +28,15 @@
   var sharp = document.getElementById("sharp");
   var ledger = document.getElementById("ledger_line");
   var chordName = document.getElementById("chord-name");
+  var sectionTitle = document.getElementById("section-name");
   var elems = [staff, sharp, qNote, qNoteP, ledger]; // Same order as served (laziness)
   var targ = null;
 
   window.onload = function() {
     var conn = io();
+    conn.on("section-name", function(msg) {
+      sectionTitle.innerHTML = msg;
+    });
     conn.on("serve-image-chunk", function(inf) {
       trg = elems.shift();
       if (inf.image) {
@@ -43,8 +48,11 @@
       if (msg != null) {
         ctx.clearRect(0, 0, canv.width, canv.height);
         drawStaff();
-        console.log(msg);
         drawNote(msg);
+      }
+      if (msg == 0) {
+        ctx.clearRect(0, 0, canv.width, canv.height);
+        drawStaff();
       }
     });
     conn.on("chord-chng", function(msg) {

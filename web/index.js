@@ -4,7 +4,8 @@ var io = require('socket.io')(http);
 var fs = require('fs');
 var path = require('path');
 
-var connCount = 0
+var connCount = -1;
+var numOfSections = 4;
 var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'ledger_line.png'];
 
 var keyNum = {
@@ -20,9 +21,14 @@ var keyNum = {
   AS: 9,
   B: 10,
   BS: 11
-}
+};
 
 var key = keyNum.C;
+
+// // Generate namespaces for socket sections
+// for (i=1; i<=numOfSections; i++) {
+//   io.of('/Section-{0}'.format(i));
+// }
 
 app.get('/', function(req, res){
   if (connCount < 1) {
@@ -34,6 +40,11 @@ app.get('/', function(req, res){
 
 io.on('connection', function(socket) {
   console.log('Connection Made');
+  if (connCount >= 0) {
+    var sname = 'Section ' + (connCount % numOfSections + 1);
+    socket.join(sname);
+    socket.emit("section-name", sname);
+  }
   connCount++;
   sprites.forEach(function(elem) {
     fs.readFile(__dirname + '/sprites/' + elem, function (err, buf) {
@@ -45,6 +56,13 @@ io.on('connection', function(socket) {
     connCount--;
     console.log("Disconnected");
   });
+  socket.on('chord-release', function(msg) {
+    console.log("RELEASE");
+    for (i=0;i<numOfSections; i++) {
+      io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', 0);
+      io.emit('chord-chng', "");
+    }
+  });
   socket.on('chord-msg', function(msg){
     console.log(msg);
     if (msg == null) {
@@ -55,7 +73,10 @@ io.on('connection', function(socket) {
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
     notes = getNoteNameArray(noteArr);
     chordName = getChordName(noteArr);
-    io.emit('chord-req', notes[0]);
+    for (i=0;i<numOfSections; i++) {
+      final = (i >= notes.length) ? 0 : notes[i];
+      io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
+    }
     if (chordName != 0 && chordName != 1) {
       io.emit('chord-chng', chordName);
     }
