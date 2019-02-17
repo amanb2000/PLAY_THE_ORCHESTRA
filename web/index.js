@@ -89,17 +89,19 @@ io.on('connection', function(socket) {
       return;
     }
     noteArr = msg.split(',');
-    submission = noteArr.slice(0);
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
+    submission = noteArr.slice(0);
+    // Transpose Section 1!
+    submission[0] = transposeNote(submission[0], keyNum.FS);
     notes = getNoteNameArray(noteArr);
-    subNotes = notes.slice(0);
+    chordName = getChordName(notes)
+    subNotes = getNoteNameArray(submission);
     // Get the chord data & Save
     // Key variable name: "key"
     // Notes array input: "noteArr" (midi #s)
     // THESE ARE AMAN'S FUNCTIONS FOR GETTING the DEGREES of the LAST FOUR CHORDS based on
     // Strategy: To simplify this, I'll use the last 4 notes as the thing to send in.
-    noteNums = []
-
+    noteNums = [];
     for(i = 0; i < notes.length; i++){
       notes[i] = notes[i].substring(0, notes[i].length - 1);
       noteNums.push(getNumberOfNote(notes[i]));
@@ -132,23 +134,21 @@ io.on('connection', function(socket) {
          });
 
          response.on('end', function() {
-             data_result = JSON.parse(res);
-             final_pred = data_result.Results.output1.value.Values[0][4];
-             chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
-             chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
-             chord_sugg = (chord_sugg < 1) ? 1 : chord_sugg;
-             tt = tonics[chord_sugg-1];
-             fnl = key + tt + 60;
-             pp = getNoteName(fnl);
-             io.to("master").emit("suggest", pp.substring(0, 1));
+           data_result = JSON.parse(res);
+           final_pred = data_result.Results.output1.value.Values[0][4];
+           chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
+           chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
+           chord_sugg = (chord_sugg < 1) ? 1 : chord_sugg;
+           tt = tonics[chord_sugg-1];
+           fnl = key + tt + 60;
+           pp = getNoteName(fnl);
+           io.to("master").emit("suggest", pp.substring(0, 1));
          });
        });
 
       azReq.write(JSON.stringify(data_out));
       azReq.end();
     }
-
-    chordName = getChordName(submission);
     for (i=0;i<numOfSections; i++) {
       final = (i >= subNotes.length) ? 0 : subNotes[i];
       io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
@@ -162,6 +162,15 @@ io.on('connection', function(socket) {
 http.listen(3000, function() {
   console.log('listening on 192.168.122.101:3000');
 })
+
+function transposeNote(noteNum, newKey) {
+  if (newKey == keyNum.AS) {
+    return noteNum - 2;
+  } else if (newKey == keyNum.FS) {
+    return noteNum - 3;
+  }
+  return noteNum;
+}
 
 function getNoteNameArray(fourArrayIn){
   retVal = [];
