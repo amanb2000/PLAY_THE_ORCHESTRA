@@ -7,6 +7,23 @@ var path = require('path');
 var connCount = 0
 var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'ledger_line.png'];
 
+var keyNum = {
+  C: 0,
+  CS: 1,
+  D: 2,
+  E: 3,
+  F: 4,
+  FS: 5,
+  G: 6,
+  GS: 7,
+  A: 8,
+  AS: 9,
+  B: 10,
+  BS: 11
+}
+
+var key = keyNum.C;
+
 app.get('/', function(req, res){
   if (connCount < 1) {
     res.sendFile(__dirname + '/test.html');
@@ -190,7 +207,7 @@ function get7Chord(numFourArrayIn){
   if(arrIn[2]-arrIn[1] === 4){
     major = true;
   }
-  else if(arrIn[1]-arrIn[0] == 3){
+  else if(arrIn[2]-arrIn[1] == 3){
     major = false;
   }
 
@@ -198,17 +215,19 @@ function get7Chord(numFourArrayIn){
     return 0;
   }
 
-  var major7 = -1;
+  var major7 = false;
 
   if(arrIn[1]-arrIn[0] === 1){
     major7 = true;
   }
   if(arrIn[1]-arrIn[0] === 2){
     major7 = false;//dominant or minor 7
+    console.log("MINOR 7")
   }
 
   if(major7 === -1){
-    return 0;
+    console.log("RETURNING Badly MINOR 7")
+    // return 0;
   }
 
   bass_name = getNoteName(arrIn[1]);
@@ -229,6 +248,7 @@ function get7Chord(numFourArrayIn){
     }
     else if(major7 === false){
       retVal += " Minor 7"
+      console.log('There should be some minor 7 going on');
     }
   }
 
