@@ -72,6 +72,9 @@ io.on('connection', function(socket) {
     noteArr = msg.split(',');
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
     notes = getNoteNameArray(noteArr);
+    // Get the chord data & Save
+    // Key variable name: "key"
+    // Notes array input: "noteArr" (midi #s)
     chordName = getChordName(noteArr);
     for (i=0;i<numOfSections; i++) {
       final = (i >= notes.length) ? 0 : notes[i];
