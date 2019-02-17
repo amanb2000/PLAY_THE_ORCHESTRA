@@ -73,6 +73,7 @@
   }
 
   function drawNote(nt, time=1/4) {
+    console.log(nt);
     var note = null;
     var pos = getPos(nt);
     if (time == 1/4) {
@@ -108,12 +109,11 @@
 
   function getPos(val) { // C4 is middle C @ coords 100, 100
     // 25 between spaces. 12 up to line
+    console.log(val);
     var sp = val.split('');
     var oct = parseInt(sp.pop()) - 4;
     var nt = sp.join();
-    console.log(sp[0]);
     var noteNum = getNoteNum(sp[0]);
-    console.log("noteNum:" + noteNum);
     var octave_dist = 25*3.5;
     var y = 100;
     return [160, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];

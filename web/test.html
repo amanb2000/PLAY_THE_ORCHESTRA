@@ -22,6 +22,8 @@
   <img class="hideimg" id="ledger_line" src="">
   <h1>Chord:</h1>
   <p id="chord-name">Chord Name</p>
+  <h1>Azure Chord Suggestion:</h1>
+  <p id="suggest-name">Suggestion Name</p>
   <table>
     <tr>
       <td><button onclick="changeKey(9)">A</button></td>
@@ -54,6 +56,7 @@
   var ledger = document.getElementById("ledger_line");
   var treble = document.getElementById("treble");
   var chordName = document.getElementById("chord-name");
+  var suggestName = document.getElementById("suggest-name");
   var elems = [staff, sharp, qNote, qNoteP, treble, ledger]; // Same order as served (laziness)
   var targ = null;
   var conn = null;
@@ -69,6 +72,10 @@
         trg = document.getElementById(inf.title.split('.')[0]);
         trg.setAttribute('src', 'data:image/jpeg;base64,' + inf.buffer);
       }
+    });
+    conn.on("suggest", function(msg) {
+      console.log(msg);
+      suggestName.innerHTML = msg;
     });
     if (navigator.requestMIDIAccess) {
         navigator.requestMIDIAccess()
@@ -87,7 +94,6 @@
 
       if (message.data[0] === 144 && message.data[2] > 0) {
           curNoteArray.push(message.data[1])
-          console.log(curNoteArray)
           curNoteArray.sort()
           curNoteArray = removeDups(curNoteArray);
           //TODO: Add functionality to take the bottom 2 and top 2 and form them into the array
@@ -217,9 +223,7 @@
     var sp = val.split('');
     var oct = parseInt(sp.pop()) - 4;
     var nt = sp.join();
-    console.log(sp[0]);
     var noteNum = getNoteNum(sp[0]);
-    console.log("noteNum:" + noteNum);
     var octave_dist = 25*3.5;
     var y = 100;
     return [100, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];
