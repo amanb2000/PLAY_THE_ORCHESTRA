@@ -1,0 +1,15 @@
+Next Steps: Play the Orchestra
+
+* Make sliders, pedals for pedals, drums, rhythm.
+* Key indicator for users (grid)
+* Chord Analysis
+* Tuner
+* [Google Cloud, Microsoft Azure]Analytics
+	- Rate of note switching
+	- Most common chord/key
+	- 
+	https://powerbi.microsoft.com/en-us/
+* AI
+	- RNN for regenerating piano roll
+	- Net/SVM for predicting next chord?
+		https://docs.microsoft.com/en-us/azure/machine-learning/service/how-to-deploy-and-where
