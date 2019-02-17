@@ -94,15 +94,21 @@ io.on('connection', function(socket) {
     // Transpose Section 1!
     submission[0] = transposeNote(submission[0], keyNum.FS);
     notes = getNoteNameArray(noteArr);
-    chordName = getChordName(notes)
+    // Null check notes
+    var nullNote = false
+    notes.forEach(function (val) { if (val == null || val == NaN) { console.log("asd"); nullNote = true; }});
+    if (nullNote) { return; }
+    var chordName = getChordName(notes)
     subNotes = getNoteNameArray(submission);
     // Get the chord data & Save
     // Key variable name: "key"
     // Notes array input: "noteArr" (midi #s)
     // THESE ARE AMAN'S FUNCTIONS FOR GETTING the DEGREES of the LAST FOUR CHORDS based on
     // Strategy: To simplify this, I'll use the last 4 notes as the thing to send in.
+
     noteNums = [];
     for(i = 0; i < notes.length; i++){
+      if (notes[i]) {} else { return; }
       notes[i] = notes[i].substring(0, notes[i].length - 1);
       noteNums.push(getNumberOfNote(notes[i]));
       noteNums[i]-=key;
@@ -113,7 +119,7 @@ io.on('connection', function(socket) {
         noteNums[i] = 7;
       }
     }
-    if (noteNums.length != 0) {
+    if (noteNums.length != 0 && noteArr.length > 2) {
       while(noteNums.length < 4){
         noteNums.push(noteNums[0]);
       }
@@ -135,6 +141,8 @@ io.on('connection', function(socket) {
 
          response.on('end', function() {
            data_result = JSON.parse(res);
+           if (data_result.Results == null) { return; }
+           console.log(data_result);
            final_pred = data_result.Results.output1.value.Values[0][4];
            chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
            chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
@@ -142,6 +150,9 @@ io.on('connection', function(socket) {
            tt = tonics[chord_sugg-1];
            fnl = key + tt + 60;
            pp = getNoteName(fnl);
+           if (chordName != 0 && chordName != 1 && pp == chordName.split(" ")[0]) {
+             pp = getNoteName(fnl + 5);
+           }
            io.to("master").emit("suggest", pp.substring(0, 1));
          });
        });
