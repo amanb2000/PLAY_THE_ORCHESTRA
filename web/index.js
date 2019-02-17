@@ -5,7 +5,7 @@ var fs = require('fs');
 var path = require('path');
 
 var connCount = 0
-var sprites = ['staff.png', 'quarter.png', 'sharp.png', 'quarterP.png', 'ledger_line.png'];
+var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'ledger_line.png'];
 
 app.get('/', function(req, res){
   if (connCount < 1) {
@@ -19,23 +19,8 @@ io.on('connection', function(socket) {
   console.log('Connection Made');
   connCount++;
   sprites.forEach(function(elem) {
-    socket.emit("image-notify");
-    var readStream = fs.createReadStream(path.resolve(__dirname, './sprites/' + elem), {
-      encoding: 'binary'
-    }), chunks = [];
-
-    readStream.on('readable', function() {
-      console.log("Loading img");
-    });
-
-    readStream.on('data', function(chunk) {
-      console.log("ASda");
-      chunks.push(chunk);
-      socket.emit('serve-image-chunk', chunk);
-    });
-
-    readStream.on('end', function() {
-      console.log("Image loaded");
+    fs.readFile(__dirname + '/sprites/' + elem, function (err, buf) {
+      socket.emit("serve-image-chunk", {image: true, buffer: buf.toString('base64'), title: elem });
     });
   });
 
