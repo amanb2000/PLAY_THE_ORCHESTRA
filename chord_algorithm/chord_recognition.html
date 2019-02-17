@@ -246,14 +246,13 @@
       return 0;
     }
 
-    var major7 = false;
+    var major7 = -1;
 
     if(arrIn[1]-arrIn[0] === 1){
       major7 = true;
     }
     if(arrIn[1]-arrIn[0] === 2){
       major7 = false;//dominant or minor 7
-      console.log("MINOR 7")
     }
 
     if(major7 === -1){
@@ -279,7 +278,6 @@
       }
       else if(major7 === false){
         retVal += " Minor 7"
-        console.log('There should be some minor 7 going on');
       }
     }
 
