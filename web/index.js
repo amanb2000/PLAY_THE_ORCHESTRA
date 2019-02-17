@@ -1,9 +1,11 @@
 var app = require('express')();
 var http = require('http').Server(app);
+var https = require('https');
 var io = require('socket.io')(http);
 var fs = require('fs');
 var path = require('path');
 
+var api_key = 'WqUjD0EL3bqerPdCIMQ8y/LYgP8obojek7E74c3LIlhhikhsH4KGHhXHBagSnwb77qPcHjQhWDFmTmSL15qatQ==';
 var connCount = -1;
 var numOfSections = 4;
 var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'treble.png', 'ledger_line.png'];
@@ -24,6 +26,17 @@ var keyNum = {
 };
 
 var key = 0;
+
+// Azure
+var options = {
+  hostname: 'ussouthcentral.services.azureml.net',
+  path: '/workspaces/fd5c4b62dde14c5a83e5a62cc4d30a39/services/d78460f565d14299b15e570dd5864cb6/execute?api-version=2.0&details=true',
+  method: 'POST',
+  headers: {
+    'Content-type': 'application/json',
+    Authorization: 'Bearer ' + api_key
+  }
+}
 
 app.get('/', function(req, res){
   if (connCount < 0) {
@@ -85,6 +98,35 @@ io.on('connection', function(socket) {
     }
   });
 });
+
+azReq = https.request(options, (response) => {
+
+  var res = '';
+  response.on('data', function(chunk) {
+    res += chunk;
+  });
+
+  response.on('end', function() {
+    data_result = JSON.parse(res);
+    final_pred = data_result.Results.output1.value.Values[0][4];
+  })
+});
+
+data_out = {
+
+        "Inputs": {
+
+                "input1":
+                {
+                    "ColumnNames": ["2", "4", "3", "7"],
+                    "Values": [ [ "0", "0", "0", "0" ], [ "0", "0", "0", "0" ], ]
+                },        },
+            "GlobalParameters": {
+}
+    }
+
+azReq.write(JSON.stringify(data_out));
+azReq.end();
 
 http.listen(3000, function() {
   console.log('listening on 192.168.122.101:3000');
