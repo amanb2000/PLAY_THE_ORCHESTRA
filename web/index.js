@@ -9,6 +9,8 @@ var api_key = 'WqUjD0EL3bqerPdCIMQ8y/LYgP8obojek7E74c3LIlhhikhsH4KGHhXHBagSnwb77
 var connCount = -1;
 var numOfSections = 4;
 var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'treble.png', 'ledger_line.png'];
+var tonics = [0, 2, 4, 5, 7, 9, 11];
+
 
 var keyNum = {
   C: 0,
@@ -26,6 +28,8 @@ var keyNum = {
 };
 
 var key = 0;
+
+var resses = [];
 
 // Azure
 var options = {
@@ -53,6 +57,8 @@ io.on('connection', function(socket) {
     socket.join(sname);
     socket.emit("section-name", sname);
     socket.emit("key-chng", getKeyName(key));
+  } else {
+    socket.join("master");
   }
   connCount++;
   sprites.forEach(function(elem) {
@@ -76,7 +82,7 @@ io.on('connection', function(socket) {
     key = parseInt(msg);
     keyName = getKeyName(key);
     io.emit('key-chng', keyName);
-  })
+  });
   socket.on('chord-msg', function(msg){
     if (msg == null) {
       io.emit('chord-chng', "");
@@ -84,16 +90,31 @@ io.on('connection', function(socket) {
     }
     noteArr = msg.split(',');
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
+    submission = noteArr.slice(0);
+    // Transpose Section 1!
+    submission[0] = transposeNote(submission[0], keyNum.FS);
     notes = getNoteNameArray(noteArr);
+    // Null check notes
+    var nullNote = false
+    notes.forEach(function (val) { if (val == null || val == NaN) { console.log("asd"); nullNote = true; }});
+    if (nullNote) { return; }
+    var chordName = getChordName(noteArr);
+    console.log(chordName);
+    if (chordName != 0 && chordName != 1) {
+      io.emit('chord-chng', chordName);
+    }
+    subNotes = getNoteNameArray(submission);
     // Get the chord data & Save
     // Key variable name: "key"
     // Notes array input: "noteArr" (midi #s)
     // THESE ARE AMAN'S FUNCTIONS FOR GETTING the DEGREES of the LAST FOUR CHORDS based on
     // Strategy: To simplify this, I'll use the last 4 notes as the thing to send in.
-    noteNums = []
 
+    noteNums = [];
     for(i = 0; i < notes.length; i++){
-      noteNums.append(getNumberOfNote(notes[i]));
+      if (notes[i]) {} else { break; }
+      notes[i] = notes[i].substring(0, notes[i].length - 1);
+      noteNums.push(getNumberOfNote(notes[i]));
       noteNums[i]-=key;
       if(noteNums[i] < 0){
         noteNums[i] = 0;
@@ -102,59 +123,65 @@ io.on('connection', function(socket) {
         noteNums[i] = 7;
       }
     }
-
-    while(noteNums.length < 4){
-      noteNums.append(noteNums[0]);
-    }
-
-    //TO ADAM: noteNums is the int array of length 4 that you send to Azure
-
-
-
-
-    chordName = getChordName(noteArr);
     for (i=0;i<numOfSections; i++) {
-      final = (i >= notes.length) ? 0 : notes[i];
+      final = (i >= subNotes.length) ? 0 : subNotes[i];
       io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
     }
-    if (chordName != 0 && chordName != 1) {
-      io.emit('chord-chng', chordName);
-    }
-  });
-});
-
-azReq = https.request(options, (response) => {
-
-  var res = '';
-  response.on('data', function(chunk) {
-    res += chunk;
-  });
-
-  response.on('end', function() {
-    data_result = JSON.parse(res);
-    final_pred = data_result.Results.output1.value.Values[0][4];
-  })
-});
-
-data_out = {
-
+    if (noteNums.length != 0 && noteArr.length > 2) {
+      while(noteNums.length < 4){
+        noteNums.push(noteNums[0]);
+      }
+      data_out = {
         "Inputs": {
+          "input1": {
+            "ColumnNames": ["2", "4", "3", "7"],
+            "Values": [noteNums]},
+          },
+         "GlobalParameters": {}
+       };
 
-                "input1":
-                {
-                    "ColumnNames": ["2", "4", "3", "7"],
-                    "Values": [ [ "0", "0", "0", "0" ], [ "0", "0", "0", "0" ], ]
-                },        },
-            "GlobalParameters": {
-}
+       azReq = https.request(options, (response) => {
+
+         var res = '';
+         response.on('data', function(chunk) {
+           res += chunk;
+         });
+
+         response.on('end', function() {
+           data_result = JSON.parse(res);
+           if (data_result.Results == null) { return; }
+           final_pred = data_result.Results.output1.value.Values[0][4];
+           chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
+           chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
+           chord_sugg = (chord_sugg < 1) ? 1 : chord_sugg;
+           tt = tonics[chord_sugg-1];
+           fnl = key + tt + 60;
+           pp = getNoteName(fnl);
+           if (chordName != 0 && chordName != 1 && pp == chordName.split(" ")[0]) {
+             pp = getNoteName(fnl + 5);
+           }
+           io.to("master").emit("suggest", pp.substring(0, 1));
+         });
+       });
+
+      azReq.write(JSON.stringify(data_out));
+      azReq.end();
     }
-
-azReq.write(JSON.stringify(data_out));
-azReq.end();
+  });
+});
 
 http.listen(3000, function() {
   console.log('listening on 192.168.122.101:3000');
 })
+
+function transposeNote(noteNum, newKey) {
+  if (newKey == keyNum.AS) {
+    return noteNum - 2;
+  } else if (newKey == keyNum.FS) {
+    return noteNum - 3;
+  }
+  return noteNum;
+}
 
 function getNoteNameArray(fourArrayIn){
   retVal = [];
