@@ -2,6 +2,8 @@ var app = require('express')();
 var http = require('http').Server(app);
 var https = require('https');
 var io = require('socket.io')(http);
+var np = require('npm');
+var vex = require('vexflow')(np);
 var fs = require('fs');
 var path = require('path');
 
@@ -92,7 +94,7 @@ io.on('connection', function(socket) {
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
     submission = noteArr.slice(0);
     // Transpose Section 1!
-    submission[0] = transposeNote(submission[0], keyNum.FS);
+    // submission[0] = transposeNote(submission[0], keyNum.FS);
     notes = getNoteNameArray(noteArr);
     // Null check notes
     var nullNote = false

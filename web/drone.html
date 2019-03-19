@@ -1,6 +1,7 @@
 <html>
 <title>Player</title>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/vexflow/releases/vexflow-min.js"></script>
 <html>
 <style>
 .hideimg {
@@ -12,30 +13,39 @@
 <h1 id="section-name">Section</h1>
 <h1>Key: </h1>
 <p id="key-name">C</p>
-<canvas id="main" width=800 height=260></canvas>
-<img class="hideimg" id="staff" onload="drawStaff()" src="">
+<div id="main" width=800 height=260></div>
+<!-- <img class="hideimg" id="staff" onload="drawStaff()" src="">
 <img class="hideimg" id="quarter" src="">
 <img class="hideimg" id="quarterP" src="">
 <img class="hideimg" id="sharp" src="">
 <img class="hideimg" id="treble" src="">
-<img class="hideimg" id="ledger_line" src="">
+<img class="hideimg" id="ledger_line" src=""> -->
 <h1>Chord:</h1>
 <p id="chord-name">Chord Name</p>
 <script>
   var conn = null;
+  VF = Vex.Flow;
+  // var canv = document.getElementById("main");
+  // var ctx = canv.getContext("2d");
+  // var staff = document.getElementById("staff");
+  // var qNote = document.getElementById("quarter");
+  // var qNoteP = document.getElementById("quarterP");
+  // var sharp = document.getElementById("sharp");
+  // var ledger = document.getElementById("ledger_line");
+  // var treble = document.getElementById("treble");
   var canv = document.getElementById("main");
-  var ctx = canv.getContext("2d");
-  var staff = document.getElementById("staff");
-  var qNote = document.getElementById("quarter");
-  var qNoteP = document.getElementById("quarterP");
-  var sharp = document.getElementById("sharp");
-  var ledger = document.getElementById("ledger_line");
-  var treble = document.getElementById("treble");
+  var rend = new VF.Renderer(canv, VF.Renderer.Backends.SVG);
+  rend.resize(800, 260);
+  var ctx = rend.getContext();
   var chordName = document.getElementById("chord-name");
   var keyName = document.getElementById("key-name");
   var sectionTitle = document.getElementById("section-name");
   var elems = [staff, sharp, qNote, qNoteP, treble, ledger]; // Same order as served (laziness)
   var targ = null;
+
+  var staff = new VF.Stave(10, 40, 200);
+  staff.addClef("treble").addTimeSignature("4/4");
+  staff.setContext(ctx).draw();
 
   window.onload = function() {
     var conn = io();
@@ -45,13 +55,13 @@
     conn.on("key-chng", function(msg) {
       keyName.innerHTML = msg;
     });
-    conn.on("serve-image-chunk", function(inf) {
-      trg = elems.shift();
-      if (inf.image) {
-        trg = document.getElementById(inf.title.split('.')[0]);
-        trg.setAttribute('src', 'data:image/jpeg;base64,' + inf.buffer);
-      }
-    });
+    // conn.on("serve-image-chunk", function(inf) {
+    //   trg = elems.shift();
+    //   if (inf.image) {
+    //     trg = document.getElementById(inf.title.split('.')[0]);
+    //     trg.setAttribute('src', 'data:image/jpeg;base64,' + inf.buffer);
+    //   }
+    // });
     conn.on("chord-req", function(msg) {
       if (msg == 0) {
         ctx.clearRect(0, 0, canv.width, canv.height);
@@ -67,13 +77,12 @@
     });
   }
 
-  function drawStaff() {
-    ctx.drawImage(staff, 10, 10, 400, 200);
-    ctx.drawImage(treble, 38, 22, 105, 200);
-  }
+  // function drawStaff() {
+  //   ctx.drawImage(staff, 10, 10, 400, 200);
+  //   ctx.drawImage(treble, 38, 22, 105, 200);
+  // }
 
   function drawNote(nt, time=1/4) {
-    console.log(nt);
     var note = null;
     var pos = getPos(nt);
     if (time == 1/4) {
