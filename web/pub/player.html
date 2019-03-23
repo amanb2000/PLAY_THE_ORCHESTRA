@@ -1,0 +1,118 @@
+<html>
+<title>Player</title>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/pub/vexflow.js"></script>
+<script src="/pub/jquery.js"></script>
+<script src="/pub/musicLib.js"></script>
+<link rel="stylesheet" type="text/css" href="/pub/style.css"/>
+<html>
+<body>
+  <h1 id="section-name">________</h1>
+  <h1>Key: </h1>
+  <p id="key-name">C</p>
+  <div id="main" width=1200 height=400></div>
+  <h1>Chord:</h1>
+  <p id="chord-name"></p>
+</body>
+<script>
+  VF = Vex.Flow;  
+  var conn = io();
+  var section = null;
+  var canv = document.getElementById("main");
+  var chordName = document.getElementById("chord-name");
+  var keyName = document.getElementById("key-name");
+  var sectionTitle = document.getElementById("section-name");
+  var targ = null;
+  var sectionID = -1;
+  
+  // Make Renderer
+  var rend = new VF.Renderer(canv, VF.Renderer.Backends.SVG);
+  rend.resize(600, 185);
+  var ctx = rend.getContext();
+  ctx.scale(1.5,1.5);
+  var svgBack = $('#main').find('svg');
+  // Assign defaults for staff display
+  var staff = null;
+  
+  // Get section ID from browser URL
+  gets = window.location.search.substring(1);
+  gets.split("&").forEach( function(data) {
+    pair = data.split("=");
+    if (pair[0] == "section") {
+      sectionID = parseInt(pair[1]);
+    }
+  });
+  
+  // Check to make sure sectionID exists
+  if (sectionID == -1) {
+    // Big bad
+    $('body').html("<div id='error-cont' class='button-disp'>" +
+                    "<h1 class='oopsies'>There is no section here :(</h1>" + 
+                    "<p>Please return to the main page and try again</p></div>");
+    $('#error-cont').css("flex-direction", "column");
+  }
+  
+  // Send Join request
+  conn.emit('join-section', sectionID.toString());
+  
+  // Handle join requests
+  conn.on("send-client-data", function(obj) {
+    if (section != null) { return; }
+    section = JSON.parse(obj);
+    if (section == null) {
+      // Display error big bad
+      return false
+    }
+    // Change section heading
+    sectionTitle.innerHTML = section.title;
+    // Build the staff
+    staff = new VF.Stave(20, 0, 275);
+    staff.addClef(section.clef).addTimeSignature("4/4");
+    staff.setContext(ctx).draw();
+    // Add Playing handlers
+    // Change key display
+    conn.on("key-chng", function(msg) {
+      keyName.innerHTML = msg;
+    });
+    // Change note display
+    conn.on("chord-req", function(msg) {
+      if (msg == 0) {
+        clearNote();
+      } else if (msg != null) {
+        drawNote(transposeNote(parseInt(msg), section.key));
+      }
+    });
+    // Change chord display
+    conn.on("chord-chng", function(msg) {
+      chordName.innerHTML = msg;
+    });
+  });
+
+  function clearNote() {
+    // Clear
+    svgBack.html(svgBack.html().split('<g id="marker"></g>')[0]);
+    svgBack.append('<g id="marker"></g>');
+    return true;
+  }
+
+  function drawNote(nt) {
+    clearNote()
+    // Get Note
+    noteVal = vexify(nt);
+    // Create Vex Note
+    var note = new VF.StaveNote({clef: section.clef, keys: [noteVal[0]], duration: "w", align_center: true});
+    // Add Accidental
+    if (noteVal[1]) {
+      note.addAccidental(0, new Accidental("#"));
+    }
+    // Create Voice
+    var voice = new VF.Voice({num_beats: 1, beat_value: 1});
+    voice.addTickables([note]);
+    // Display
+    var formatter = new VF.Formatter().joinVoices([voice]).format([voice], 150);
+    voice.draw(ctx, staff);
+  }
+</script>
+</html>
+
+</html>

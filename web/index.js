@@ -1,19 +1,14 @@
-var app = require('express')();
+var express = require('express');
+var app = express();
 var http = require('http').Server(app);
 var https = require('https');
 var io = require('socket.io')(http);
-var np = require('npm');
-var vex = require('vexflow')(np);
 var fs = require('fs');
 var path = require('path');
 
-var api_key = 'WqUjD0EL3bqerPdCIMQ8y/LYgP8obojek7E74c3LIlhhikhsH4KGHhXHBagSnwb77qPcHjQhWDFmTmSL15qatQ==';
-var connCount = -1;
-var numOfSections = 4;
-var sprites = ['staff.png', 'sharp.png', 'quarter.png', 'quarterP.png', 'treble.png', 'ledger_line.png'];
+//https://www.sohamkamani.com/blog/2015/08/21/python-nodejs-comm/
+
 var tonics = [0, 2, 4, 5, 7, 9, 11];
-
-
 var keyNum = {
   C: 0,
   CS: 1,
@@ -33,75 +28,95 @@ var key = 0;
 
 var resses = [];
 
-// Azure
-var options = {
-  hostname: 'ussouthcentral.services.azureml.net',
-  path: '/workspaces/fd5c4b62dde14c5a83e5a62cc4d30a39/services/d78460f565d14299b15e570dd5864cb6/execute?api-version=2.0&details=true',
-  method: 'POST',
-  headers: {
-    'Content-type': 'application/json',
-    Authorization: 'Bearer ' + api_key
-  }
+var masterData = {
+  active: false,
+  sections: [
+    {
+      id: 0,
+      title: "Trumpets",
+      key: "C#",
+      clef: "treble",
+      range: [60, 75]
+    },
+    {
+      id: 1,
+      title: "Trombones",
+      key: "E",
+      clef: "bass",
+      range: [46, 58]
+    }
+  ],
+  allowSpectators: false,
+  configured: false
 }
 
+var numOfSections = masterData.sections.length;
+
+app.use('/pub', express.static(path.join(__dirname, 'pub')));
+
 app.get('/', function(req, res){
-  if (connCount < 0) {
-    res.sendFile(__dirname + '/test.html');
-  } else {
-    res.sendFile(__dirname + '/drone.html');
-  }
+  res.sendFile(__dirname + '/landing.html');
 });
 
 io.on('connection', function(socket) {
   console.log('Connection Made');
-  if (connCount >= 0) {
-    var sname = 'Section ' + (connCount % numOfSections + 1);
-    socket.join(sname);
-    socket.emit("section-name", sname);
-    socket.emit("key-chng", getKeyName(key));
-  } else {
-    socket.join("master");
-  }
-  connCount++;
-  sprites.forEach(function(elem) {
-    fs.readFile(__dirname + '/sprites/' + elem, function (err, buf) {
-      socket.emit("serve-image-chunk", {image: true, buffer: buf.toString('base64'), title: elem });
-    });
+  socket.emit("send-master-data", JSON.stringify(masterData));
+  
+  // Wait for master
+  socket.on('become-master', function() {
+    masterData.active = true;
+    socket.join('master');
+    console.log("Master has joined the session");
   });
 
-  socket.on('disconnection', function(socket) {
-    connCount--;
+  socket.on('disconnect', function(socket) {
     console.log("Disconnected");
+    // Check if disconnected was master
+    if (masterData.active) {
+      roster = io.in('master').clients((error, cls) => {
+        if (cls.length < 1) {
+          masterData.active = false;
+          console.log("Master has left the session");
+        }
+      });
+    }
   });
+  
   socket.on('chord-release', function(msg) {
     for (i=0;i<numOfSections; i++) {
       io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', 0);
       io.emit('chord-chng', "");
     }
   });
+  
+  socket.on('join-section', function(id) {
+    socket.join('section-'+id);
+    io.to('section-'+id).emit("send-client-data", JSON.stringify(getSectionData(parseInt(id))));
+  });
+  
   socket.on('chng-key', function(msg) {
     console.log(msg);
     key = parseInt(msg);
     keyName = getKeyName(key);
     io.emit('key-chng', keyName);
   });
-  socket.on('chord-msg', function(msg){
+  
+  socket.on('chord-msg', function(msg){ // Formulate data packet for 100ms?
     if (msg == null) {
       io.emit('chord-chng', "");
+      io.emit('chord-req', 0);
       return;
     }
     noteArr = msg.split(',');
     noteArr.forEach(function (elem, ind) { noteArr[ind] = parseInt(elem)});
     submission = noteArr.slice(0);
     // Transpose Section 1!
-    // submission[0] = transposeNote(submission[0], keyNum.FS);
     notes = getNoteNameArray(noteArr);
     // Null check notes
     var nullNote = false
     notes.forEach(function (val) { if (val == null || val == NaN) { console.log("asd"); nullNote = true; }});
     if (nullNote) { return; }
     var chordName = getChordName(noteArr);
-    console.log(chordName);
     if (chordName != 0 && chordName != 1) {
       io.emit('chord-chng', chordName);
     }
@@ -126,63 +141,24 @@ io.on('connection', function(socket) {
       }
     }
     for (i=0;i<numOfSections; i++) {
-      final = (i >= subNotes.length) ? 0 : subNotes[i];
-      io.to('Section ' + (i % numOfSections + 1)).emit('chord-req', final);
-    }
-    if (noteNums.length != 0 && noteArr.length > 2) {
-      while(noteNums.length < 4){
-        noteNums.push(noteNums[0]);
-      }
-      data_out = {
-        "Inputs": {
-          "input1": {
-            "ColumnNames": ["2", "4", "3", "7"],
-            "Values": [noteNums]},
-          },
-         "GlobalParameters": {}
-       };
-
-       azReq = https.request(options, (response) => {
-
-         var res = '';
-         response.on('data', function(chunk) {
-           res += chunk;
-         });
-
-         response.on('end', function() {
-           data_result = JSON.parse(res);
-           if (data_result.Results == null) { return; }
-           final_pred = data_result.Results.output1.value.Values[0][4];
-           chord_sugg = Math.round((7/0.06139)*(final_pred - 3.973564));
-           chord_sugg = (chord_sugg > 7) ? 7 : chord_sugg;
-           chord_sugg = (chord_sugg < 1) ? 1 : chord_sugg;
-           tt = tonics[chord_sugg-1];
-           fnl = key + tt + 60;
-           pp = getNoteName(fnl);
-           if (chordName != 0 && chordName != 1 && pp == chordName.split(" ")[0]) {
-             pp = getNoteName(fnl + 5);
-           }
-           io.to("master").emit("suggest", pp.substring(0, 1));
-         });
-       });
-
-      azReq.write(JSON.stringify(data_out));
-      azReq.end();
+      final = (i >= noteArr.length) ? 0 : noteArr[i];
+      io.to('section-' + (i % numOfSections + 1)).emit('chord-req', final);
     }
   });
-});
+}); 
 
 http.listen(3000, function() {
   console.log('listening on 192.168.122.101:3000');
 })
 
-function transposeNote(noteNum, newKey) {
-  if (newKey == keyNum.AS) {
-    return noteNum - 2;
-  } else if (newKey == keyNum.FS) {
-    return noteNum - 3;
-  }
-  return noteNum;
+function getSectionData(id) {
+  var result = null
+  masterData.sections.forEach(function(sec) {
+    if (sec.id == id){
+      result = sec;
+    }
+  });
+  return result;
 }
 
 function getNoteNameArray(fourArrayIn){

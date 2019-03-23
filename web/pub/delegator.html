@@ -1,0 +1,432 @@
+<html>
+  <title>Master</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/pub/vexflow.js"></script>
+  <script src="/pub/musicLib.js"></script>
+  <script src="/pub/jquery.js"></script>
+  <html>
+  <style>
+  .tbl-size {
+    margin-left: 180px;
+    width: 300px;
+  }
+  </style>
+  <body>
+    <div id="main" width=1200 height=400></div>
+    <h1>Chord:</h1>
+    <p id="chord-name">___</p>
+    <table>
+      <tr>
+        <td><button onclick="changeKey(9)">A</button></td>
+        <td><button onclick="changeKey(10)">A#</button></td>
+        <td><button onclick="changeKey(11)">B</button></td>
+      </tr>
+      <tr>
+        <td><button onclick="changeKey(0)">C</button></td>
+        <td><button onclick="changeKey(1)">C#</button></td>
+        <td><button onclick="changeKey(2)">D</button></td>
+      </tr>
+      <tr>
+        <td><button onclick="changeKey(3)">D#</button></td>
+        <td><button onclick="changeKey(4)">E</button></td>
+        <td><button onclick="changeKey(5)">F</button></td>
+      </tr>
+      <tr>
+        <td><button onclick="changeKey(6)">F#</button></td>
+        <td><button onclick="changeKey(7)">G</button></td>
+        <td><button onclick="changeKey(8)">G#</button></td>
+      </tr>
+    </table>
+  <script>
+  var canv = document.getElementById("main");
+  var chordName = document.getElementById("chord-name");
+  VF = Vex.Flow;
+  var targ = null;
+  var active = true;
+  var curNoteArray = [];
+  var curFourNotes = [];
+  var staffTrb = null;
+  var staffBss = null;
+  var treble = null;
+  var bass = null;
+  
+  // Become Master
+  var conn = io();
+  conn.emit("become-master", "true");
+  
+  // Add listener
+  conn.on("suggest", function(msg) {
+    suggestName.innerHTML = msg;
+  });
+    
+  // Render the View
+  var rend = new VF.Renderer(canv, VF.Renderer.Backends.SVG);
+  rend.resize(600, 370);
+  var ctx = rend.getContext();
+  ctx.scale(1.5,1.5);
+  var svgBack = $('#main').find('svg');
+  console.log(svgBack);
+  // Add the staff
+  staffTrb = new VF.Stave(20, 0, 275);
+  staffTrb.addClef("treble").addTimeSignature("4/4");
+  staffTrb.setContext(ctx).draw();
+  staffBss = new VF.Stave(20, 60, 275);
+  staffBss.addClef("bass").addTimeSignature("4/4");
+  staffBss.setContext(ctx).draw();
+  // Add the pretty
+  brace = new VF.StaveConnector(staffTrb, staffBss).setType(3);
+  smlLine = new VF.StaveConnector(staffTrb, staffBss).setType(1);
+  bgLine = new VF.StaveConnector(staffTrb, staffBss).setType(6);
+  [brace, smlLine, bgLine].forEach( function (elem) {
+    elem.setContext(ctx).draw();
+  });
+  
+  
+  if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess()
+          .then(success, failure);
+  }
+
+  function changeKey(key) {
+    conn.emit("chng-key", key);
+    return false;
+  }
+
+  function onMIDIMessage (message) {
+      // console.log(message.data);//[0] = on/off (144=on, 128=off), [1] = note number(c3=60), [2] = velocity(0-127)
+      //note: for now, it only works when "Bank A/B" is red and the rest of the buttons are off
+
+      if (message.data[0] === 144 && message.data[2] > 0) {
+          curNoteArray.push(message.data[1])
+          curNoteArray.sort()
+          curNoteArray = removeDups(curNoteArray);
+          //TODO: Add functionality to take the bottom 2 and top 2 and form them into the array
+          // document.querySelector('#dispDiv').innerHTML = ''+curNoteArray;
+          curFourNotes = getFourNotes(curNoteArray);
+      }
+
+      if (message.data[0] === 128 || message.data[2] === 0) {
+          // console.log("removing element at index: "+curNoteArray.indexOf(message.data[1]));
+          curNoteArray.splice(curNoteArray.indexOf(message.data[1]), 1)
+          // document.querySelector('#dispDiv').innerHTML = ''+curNoteArray;
+          curFourNotes = getFourNotes(curNoteArray);
+      }
+      noteNameArray = getNoteNameArray(curFourNotes);
+
+      // document.querySelector('#disp2Div').innerHTML = ''+curFourNotes;
+      // document.querySelector('#disp3Div').innerHTML = ''+noteNameArray;
+
+
+      plotNotes(curFourNotes);
+      
+      name = getChordName(curFourNotes);
+      if (message.data[0] === 128 && noteNameArray.length == 0) {
+        conn.emit("chord-release", 0);
+        chordName.innerHTML = "";
+        return;
+      }
+      if (name != 0 && name != 1) {
+        chordName.innerHTML = name;
+      }
+      conn.emit("chord-msg", ''+curFourNotes);
+  }
+
+  function success (midi) {
+      var inputs = midi.inputs.values();
+      // inputs is an Iterator
+
+      for (var input = inputs.next(); input && !input.done; input = inputs.next()) {
+          // each time there is a midi message call the onMIDIMessage function
+          input.value.onmidimessage = onMIDIMessage;
+      }
+  }
+
+  function failure () {
+      console.error('No access to your midi devices.')
+  }
+  
+  function removeDups(arrIn) {
+    let unique = [];
+    for(i = 0; i < arrIn.length; i++){
+      if(!unique.includes(arrIn[i])){
+        unique.push(arrIn[i]);
+      }
+    }
+    return unique;
+  }
+
+  function getFourNotes(arrIn){
+    var retVal = [];
+    if(arrIn.length <= 4){
+      return arrIn;
+    }
+    retVal.push(arrIn[0]);
+    retVal.push(arrIn[1]);
+    retVal.push(arrIn[arrIn.length-2]);
+    retVal.push(arrIn[arrIn.length-1]);
+    return retVal;
+  }
+
+  function getNoteNameArray(fourArrayIn){
+    retVal = [];
+    for(i = 0; i < fourArrayIn.length; i++){
+      retVal.push(getNoteName(fourArrayIn[i]));
+    }
+    return retVal;
+  }
+
+  function getPos(val) { // C4 is middle C @ coords 100, 100
+    // 25 between spaces. 12 up to line
+    var sp = val.split('');
+    var oct = parseInt(sp.pop()) - 4;
+    var nt = sp.join();
+    var noteNum = getNoteNum(sp[0]);
+    var octave_dist = 25*3.5;
+    var y = 100;
+    return [100, y - noteNum*25/2 - oct*octave_dist, (val.length === 3)];
+  }
+
+  function getNoteNum(val) {
+    var notes = ["C", "D", "E", "F", "G", "A", "B"];
+    return notes.indexOf(val);
+  }
+
+  function plotNotes(notes) {
+    // Clear
+    svgBack.html(svgBack.html().split('<g id="marker"></g>')[0]);
+    svgBack.append('<g id="marker"></g>');
+    // Setup objects
+    treble = {
+      clef: "treble",
+      notes: [],
+      accidentals: [],
+      staveNote: null,
+      voice: new VF.Voice({num_beats: 1, beat_value: 1})
+    }
+    bass = {
+      clef: "bass",
+      notes: [],
+      accidentals: [],
+      staveNote: null,
+      voice: new VF.Voice({num_beats: 1, beat_value: 1})
+    }
+    // Process notes
+    notes.forEach(function (val) {
+      fin = vexify(val)
+      if (val < 60) { // Sometimes notes overlap
+        sel = bass;
+      } else {
+        sel = treble;
+      }
+      sel.notes.push(fin[0]);
+      if (fin[1]) {
+        sel.accidentals.push(sel.notes.length-1);
+      }
+    });
+    // Add staff stuff
+    [treble, bass].forEach(function(sel) {
+      if (sel.notes.length > 0) {
+        sel.staveNote = new VF.StaveNote({clef: sel.clef, keys: sel.notes, duration: "w", align_center: true});
+      } else {
+        sel.staveNote = new VF.GhostNote({clef: sel.clef, duration: "w"});
+      }
+      sel.accidentals.forEach(function (ind) {
+        sel.staveNote.addAccidental(ind, new VF.Accidental("#"));
+      });
+      // Manipulate voices
+      sel.voice.setStrict(false);
+    });
+    // Add Tickables
+    treble.voice.addTickables([treble.staveNote]).setStave(staffTrb);
+    bass.voice.addTickables([bass.staveNote]).setStave(staffBss);
+    // Format
+    var formatter = new VF.Formatter()
+    xStart = Math.max(staffTrb.getNoteStartX(), staffBss.getNoteStartX());
+    staffTrb.setNoteStartX(xStart);
+    staffBss.setNoteStartX(xStart);
+    // Join Voices on staves
+    formatter.joinVoices([treble.voice]);
+    formatter.joinVoices([bass.voice]);
+    // formatter.joinVoices([bass.voice]);
+    // Format together
+    formatter.formatToStave([treble.voice, bass.voice], staffTrb, {align_rests: true});
+    formatter.format([treble.voice, bass.voice], 275 - xStart);
+    // Draw
+    treble.voice.setContext(ctx).draw();
+    bass.voice.setContext(ctx).draw();
+  }
+
+  function getChordName(numFourArrayIn){
+    simpleChord = getBottomThreeChord(numFourArrayIn);
+    complexChord = get7Chord(numFourArrayIn);
+
+    if(simpleChord != 0 && simpleChord != 1){
+      return simpleChord;
+    }
+    if(complexChord != 0 && complexChord != 0){
+      return complexChord;
+    }
+    return 0;
+
+  }
+
+  function getBottomThreeChord(numFourArrayIn){
+    if(numFourArrayIn.length < 3){
+      return 0;
+    }
+    arrIn = numFourArrayIn.slice(0,3)
+    // console.log("arrIn: " + getNoteNameArray(arrIn))
+    var naturalDistance = -1;
+    naturalDistance = getNetTriDist(arrIn);
+    // console.log('Natural Distance'+naturalDistance)
+
+    var arrInv1 = arrIn.slice();
+    arrInv1[2] = arrIn[2]-12;
+    arrInv1.sort();
+
+    var naturalDistanceInv1 = -1;
+    naturalDistanceInv1 = getNetTriDist(arrInv1);
+    // console.log(''+naturalDistanceInv1)
+
+    var arrInv2 = arrInv1.slice();
+    arrInv2[2] = arrInv1[2]-12;
+    arrInv2.sort();
+
+    var naturalDistanceInv2 = -1;
+    naturalDistanceInv2 = getNetTriDist(arrInv2);
+
+    if(naturalDistance === 7){
+      arrIn = arrIn
+    }
+    else if(naturalDistanceInv1 === 7){
+      arrIn = arrInv1
+    }
+    else if(naturalDistanceInv2 == 7){
+      arrIn = arrInv2
+    }
+    else{
+      return 1;//indicates further analysis is warranted.
+    }
+
+    var major = -1;
+
+    if(arrIn[1]-arrIn[0] === 4){
+      major = true;
+    }
+    else if(arrIn[1]-arrIn[0] == 3){
+      major = false;
+    }
+
+    if(major === -1){
+      return 0;
+    }
+
+    bass_name = getNoteName(arrIn[0]);
+    bass_name = bass_name.slice(0,bass_name.length-1);
+
+    retVal = bass_name;
+
+    if(major === true){
+      retVal += " Major"
+    }
+    else if(major === false){
+      retVal += " Minor"
+    }
+
+    return retVal;
+  }
+
+  function get7Chord(numFourArrayIn){
+    if(numFourArrayIn.length < 3){
+      return 0;
+    }
+    arrIn = numFourArrayIn.slice(0,3)
+    // console.log("arrIn: " + getNoteNameArray(arrIn))
+    var naturalDistance = -1;
+    naturalDistance = getNetTriDist(arrIn);
+    // console.log('Natural Distance'+naturalDistance)
+
+    var arrInv1 = arrIn.slice();
+    arrInv1[2] = arrIn[2]-12;
+    arrInv1.sort();
+
+    var naturalDistanceInv1 = -1;
+    naturalDistanceInv1 = getNetTriDist(arrInv1);
+    // console.log(''+naturalDistanceInv1)
+
+    var arrInv2 = arrInv1.slice();
+    arrInv2[2] = arrInv1[2]-12;
+    arrInv2.sort();
+
+    var naturalDistanceInv2 = -1;
+    naturalDistanceInv2 = getNetTriDist(arrInv2);
+
+    if(naturalDistance <= 6){
+      arrIn = arrIn
+    }
+    else if(naturalDistanceInv1 <= 6){
+      arrIn = arrInv1
+    }
+    else if(naturalDistanceInv2 <= 6){
+      arrIn = arrInv2
+    }
+    else{
+      return 1;//indicates further analysis is warranted.
+    }
+
+    var major = -1;//indicator for the third
+
+    if(arrIn[2]-arrIn[1] === 4){
+      major = true;
+    }
+    else if(arrIn[2]-arrIn[1] == 3){
+      major = false;
+    }
+
+    if(major == -1){
+      return 0;
+    }
+
+    var major7 = -1;
+
+    if(arrIn[1]-arrIn[0] === 1){
+      major7 = true;
+    }
+    if(arrIn[1]-arrIn[0] === 2){
+      major7 = false;//dominant or minor 7
+    }
+
+    if(major7 === -1){
+      return 0;
+    }
+
+    bass_name = getNoteName(arrIn[1]);
+    bass_name = bass_name.slice(0,bass_name.length-1);
+
+    retVal = bass_name;
+    if(major === true){
+      if(major7 === true){
+        retVal += " Major 7"
+      }
+      else if(major7 === false){
+        retVal += " Dominant 7"
+      }
+    }
+    else if(major === false){
+      if(major7 === true){
+        retVal += ""
+      }
+      else if(major7 === false){
+        retVal += " Minor 7"
+      }
+    }
+
+    return retVal;
+  }
+
+  function getNetTriDist(numThreeArrayIn){
+    return((numThreeArrayIn[1]-numThreeArrayIn[0]) + (numThreeArrayIn[2]-numThreeArrayIn[1]))
+  }
+
+  </script>
+</html>

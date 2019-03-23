@@ -1,0 +1,51 @@
+<html>
+<head>
+  <title>Welcome!</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/pub/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="/pub/style.css"/>
+  <script>
+  var conn = io();
+  var ms;
+
+  conn.on("send-master-data", function(data) {
+    ms = JSON.parse(data);
+    if (!ms.active || ms.allowSpectators) {
+      $('#cond').attr("disabled", false);
+    }
+  });
+  </script>
+</head>
+<body>
+  <div class="button-disp" id='cont'>
+    <button class="slct-bttn" onclick="send_view()" id='cond' disabled>I am the Conductor</button>
+    <button class="slct-bttn" onclick="view_sections()" href="#" id='player'>I am a Musician</button>
+  </div>
+</body>
+<script>
+function send_view() {
+  if (ms.active) {
+    location.href = '/pub/specator.html';
+  } else {
+    location.href = '/pub/delegator.html';
+  }
+}
+
+function view_sections() {
+  var cont = $('#cont');
+  cont.html("");
+  sections = ms.sections;
+  if (sections.length < 1) {
+     cont.html("<h1 class='oopsies'>Oops, no sections can be found</h1>");
+     return false;
+  } else {
+     cont.css("flex-direction", "column");
+     sections.forEach(function(data) {
+       buildDiv = "<div class='sect-title'>" + data.title + "</div><div class='sect-key'>" + data.key + "</div>";
+       cont.append("<button class='sect-opt' onclick='location.href=" + '"/pub/player.html?section=' + data.id.toString() +  '"' + "'>" + buildDiv + "</button>");
+     });
+  }
+  return false;
+}
+</script>
+</html>
