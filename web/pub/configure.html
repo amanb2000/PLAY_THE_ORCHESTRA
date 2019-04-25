@@ -1,0 +1,110 @@
+<html>
+<head>
+  <title>Configure the Set</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/pub/jquery.js"></script>
+  <link rel="stylesheet" type="text/css" href="/pub/style.css"/>
+  <script>
+  var conn = io();
+  var ms;
+
+  conn.emit("become-master", "true");
+  conn.on("send-master-data", function(data) {
+    ms = JSON.parse(data);
+    set_spectate_color();
+  });
+  </script>
+</head>
+<body>
+  <div class="button-disp" id='cont'>
+    
+  </div>
+</body>
+<script>
+var cont = $('#cont');
+
+function toggle_spectators() {
+  conn.emit("toggle-spectate", "true");
+  refresh_data();
+}
+
+function refresh_data() {
+  conn.emit("request-master-data", "true");
+}
+
+function view_sections() {
+  // Remove Back button if presents
+  $('#back').remove();
+  // Add back button
+  $('body').prepend(`<button id='back' class='back-btn btn' onclick='back_to_home()'>< Back</button>`);
+  // Refresh cont
+  cont.html("");
+  // Create display management
+  mngDisp = "<div class='mng-box'>";
+  // Add btn
+  add = "<button class='mng-btn btn' onclick='add_section()'>+</button>";
+  // Save btn
+  save = "<button class='txt-btn btn' onclick='save_sections()'>Save</button>";
+  // Manage Groups btn
+  mngGrp = "<button class='txt-btn btn' onclick='text'>Manage Groups</button>";
+  // Put together and add
+  mngDisp = mngDisp + add + save + mngGrp + "</div>";
+  cont.append(mngDisp);
+  // Create Display for current sections
+  sections = ms.sections;
+  if (sections.length < 1) {
+     return false;
+  } else {
+     cont.css("flex-direction", "column");
+     console.log(sections);
+     sections.forEach(function(data) {
+       buildDiv = "<div class='sect-title'>" + data.title + "</div><div class='sect-key'>" + data.key + "</div>";
+       cont.append("<button class='sect-opt' onclick='location.href=" + '"/pub/player.html?section=' + data.id.toString() +  '"' + "'>" + buildDiv + "</button>");
+     });
+  }
+  return false;
+}
+
+function back_to_home() {
+  $('#back').remove();
+  cont.css('flex-direction', 'column');
+  cont.html(`<button class='sect-opt' onclick='view_sections()'>Manage Sections</button>
+              <button class='sect-opt' id='spectate' onclick='toggle_spectators()'>Toogle Spectation</button>
+              <button class='sect-opt' onclick='location.href="/pub/delegator.html"'>Begin Play</button>`);
+  refresh_data();
+}
+
+function add_section() {
+  nextID = -1;
+  ms.sections.forEach(function(val) {
+    if (val.id > nextID) {
+      nextID = val.id;
+    }
+  });
+  newSection = {
+    id: nextID + 1,
+    title: "New Section",
+    key: "C#",
+    clef: "treble",
+    group: 0
+  };
+  ms.sections.push(newSection);
+  view_sections();
+}
+
+function save_sections() {
+  conn.emit("save-sections", JSON.stringify(ms.sections));
+  // Give save success notice
+}
+
+function set_spectate_color() {
+  if (ms.allowSpectators) {
+    clr = "green";
+  } else {
+    clr = "red";
+  }
+  $('#spectate').css('background-color', clr);
+}
+
+back_to_home();
+</script>

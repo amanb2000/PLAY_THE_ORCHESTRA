@@ -59,3 +59,40 @@
   font-size: 1.7rem;
   color: black !important;
 }
+.btn:hover {
+  background-color: #3b83ad;
+}
+.btn:focus {
+  outline: none;
+}
+.btn {
+  display: flex;
+  font-family: cursive;
+  border: 2px solid #404040;
+  border-radius: 10px;
+  margin: 0.1rem;
+  color: black;
+  background-color: #26a3ec;
+  flex-direction: row;
+  justify-content: center;
+}
+.back-btn {
+  width: 5rem;
+  height: 3rem;
+  font-size: 1.2rem;
+}
+.mng-btn {
+  width: 3rem;
+  height: 3rem;
+  font-size: 3rem;
+  flex-direction: column;
+  align-items: center;
+}
+.txt-btn {
+  height: 3rem;
+  font-size: 1.6rem;
+}
+.mng-box {
+  display: flex;
+  width: 40rem;
+}

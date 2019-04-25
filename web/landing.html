@@ -18,21 +18,36 @@
 </head>
 <body>
   <div class="button-disp" id='cont'>
-    <button class="slct-bttn" onclick="send_view()" id='cond' disabled>I am the Conductor</button>
-    <button class="slct-bttn" onclick="view_sections()" href="#" id='player'>I am a Musician</button>
+    
   </div>
 </body>
 <script>
+var cont = $('#cont');
+
 function send_view() {
   if (ms.active) {
     location.href = '/pub/specator.html';
+  } else if (!ms.configured) {
+    location.href = '/pub/configure.html';
   } else {
     location.href = '/pub/delegator.html';
   }
 }
 
+function back_to_home() {
+  $('#back').remove();
+  cont.css("flex-direction", "row");
+  cont.html(`<button class="slct-bttn" onclick="send_view()" id="cond" disabled>I am the Conductor</button>
+  <button class="slct-bttn" onclick="view_sections()" href="#" id="player">I am a Musician</button>`);
+  if (!ms.active || ms.allowSpectators) {
+    $('#cond').attr("disabled", false);
+  }
+}
+
 function view_sections() {
-  var cont = $('#cont');
+  // Add back button
+  $('body').prepend(`<button id='back' class='back-btn btn' onclick='back_to_home()'>< Back</button>`);
+  // Create Display for sections
   cont.html("");
   sections = ms.sections;
   if (sections.length < 1) {
@@ -47,5 +62,7 @@ function view_sections() {
   }
   return false;
 }
+
+back_to_home();
 </script>
 </html>

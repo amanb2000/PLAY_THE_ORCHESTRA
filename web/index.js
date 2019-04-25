@@ -27,6 +27,7 @@ var keyNum = {
 var key = 0;
 
 var resses = [];
+var groups = [];
 
 var masterData = {
   active: false,
@@ -36,16 +37,23 @@ var masterData = {
       title: "Trumpets",
       key: "C#",
       clef: "treble",
-      range: [60, 75]
+      group: 0
     },
     {
       id: 1,
       title: "Trombones",
       key: "E",
       clef: "bass",
-      range: [46, 58]
+      group: 0
     }
   ],
+  groups: [
+    {
+      id: 0,
+      title: "Main",
+      range: [42,68]
+    }
+  ]
   allowSpectators: false,
   configured: false
 }
@@ -67,6 +75,19 @@ io.on('connection', function(socket) {
     masterData.active = true;
     socket.join('master');
     console.log("Master has joined the session");
+  });
+  
+  // Configuration Checks
+  socket.on('request-master-data', function() {
+    socket.emit("send-master-data", JSON.stringify(masterData));
+  });
+  
+  socket.on('toggle-spectate', function() {
+    masterData.allowSpectators = (masterData.allowSpectators) ? false : true;
+  });
+  
+  socket.on('save-sections', function(data) {
+    masterData.sections = JSON.parse(data);
   });
 
   socket.on('disconnect', function(socket) {
