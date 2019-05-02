@@ -53,7 +53,7 @@ var masterData = {
       title: "Main",
       range: [42,68]
     }
-  ]
+  ],
   allowSpectators: false,
   configured: false
 }

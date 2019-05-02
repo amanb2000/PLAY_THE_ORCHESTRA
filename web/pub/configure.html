@@ -3,6 +3,7 @@
   <title>Configure the Set</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/pub/jquery.js"></script>
+  <script src="/pub/musicLib.js"></script>
   <link rel="stylesheet" type="text/css" href="/pub/style.css"/>
   <script>
   var conn = io();
@@ -56,10 +57,22 @@ function view_sections() {
      return false;
   } else {
      cont.css("flex-direction", "column");
-     console.log(sections);
+     
      sections.forEach(function(data) {
-       buildDiv = "<div class='sect-title'>" + data.title + "</div><div class='sect-key'>" + data.key + "</div>";
-       cont.append("<button class='sect-opt' onclick='location.href=" + '"/pub/player.html?section=' + data.id.toString() +  '"' + "'>" + buildDiv + "</button>");
+       // Generate Key Dropdown
+       keyOptions = "";
+       Object.values(keyNum).forEach(function(val) {
+         keyOptions = keyOptions + "<option value='" + val + "' " + ((data.key == val) ? "selected" : "") + ">" + val + "</option>";
+       });
+       keydropDown = `<select class='sect-inp'>` + keyOptions + `</select>`
+       // Generate Groups Dropdown
+       ms.groups.forEach(function(val) {
+         
+       });
+       // Build inside of content
+       buildDiv = "<div class='inner-cont'><input class='sect-inp' type='text' id='" + "title" + data.id.toString() + "' value='" + data.title + `'></div>
+                    <div class='inner-cont'>` + keydropDown + `</div>`;
+       cont.append("<div class='sect-conf'>" + buildDiv + "</button>");
      });
   }
   return false;
